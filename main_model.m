@@ -1,46 +1,52 @@
 clear
-% close all
+close all
 
 
-%% Settings
+%% Parameter Settings
 
 % baseband modeling parameters
 use_fec = true; % enable/disable forward error correction
 bt = 0.5; % gaussian filter bandwidth
-snr = 200; % in-band signal to noise ratio (dB)
+snr = 7; % in-band signal to noise ratio (dB)
 osr = 16; % oversampling ratio
 
 % RF modeling parameters
 use_rf = true; % enable/disable RF model
+extract_way = "hard";
 adc_levels = 32; % number of ADC output codes (NB: #bits = log2[#levels])
 br = 100; % bit rate (bit/s)
 fc = 20.0e3; % carrier frequency (Hz)
-fs = 50e3; % sample frequency (Hz)
+fs = 48.0e3; % sample frequency (Hz)
 
 % plotting parameters
 plot_raw_data = true;
-plot_rf_signal = false;
+plot_rf_signal = true;
 
 % input message
-message_in = 'Hello';
+message_in = 'Hello123456879123456789123456789123456789';
+disp(message_in);
+
+
+
+
 
 
 %% Modulation
 
-% varicode encoding
+%% varicode encoding
 plain_in = varicode_encode(message_in);
 
-% FEC encoding (optional)
+%% FEC encoding (optional)
 if use_fec
     encoded_in = fec_encode(plain_in);
 else
     encoded_in = plain_in;
 end
 
-% GMSK modulation
+%% GMSK modulation
 complex_envelope_in = gmsk_modulate(encoded_in, bt, osr);
 
-% upmixing
+%% upmixing
 if use_rf
     signal_in = iq_upmixer(complex_envelope_in, osr, br, fc, fs);
 end
@@ -54,6 +60,11 @@ if use_rf
 else
     complex_envelope_out = complex_envelope_add_noise(complex_envelope_in, snr, osr);
 end
+
+
+
+
+
 
 
 %% Demodulation
@@ -71,24 +82,33 @@ if use_rf
     
 end
 
-% GMSK demodulation
+%% GMSK demodulation
 raw_out = gmsk_demodulate(complex_envelope_out, osr);
 
-% clock recovery
+%% clock recovery
 clock_out = clock_recovery(raw_out, osr);
 
-% extract bits
-encoded_out = extract_bits(raw_out, clock_out, osr);
+%% extract bits
+encoded_out = extract_bits(raw_out, clock_out, osr, extract_way);
 
-% FEC decoding (optional)
+%% FEC decoding (optional)
 if use_fec
-    plain_out = fec_decode(encoded_out);
+    plain_out = fec_decode(encoded_out,extract_way);
 else
     plain_out = encoded_out;
 end
 
-% varicode decoding
+%% varicode decoding
 message_out = varicode_decode(plain_out);
+
+%% show the result
+ascii_array = str2double(message_out);
+str = sprintf('%c',ascii_array);
+disp(str);
+BER = compute_BER(plain_in, plain_out);
+
+
+
 
 
 %% Plotting
@@ -110,7 +130,6 @@ if plot_rf_signal && use_rf
     figure('Name', 'RF signal');
     time_in = ((1 : numel(signal_in))' - 1) / osr;
     time_out = ((1 : numel(signal_out))' - 1) / osr;
-    plot(time_in, signal_in, '-', ...
-         time_out, signal_out, '-');
+    plot(time_out, signal_out, '-');
     grid();
 end
