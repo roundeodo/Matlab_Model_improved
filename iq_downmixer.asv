@@ -1,0 +1,150 @@
+function complex_envelope = iq_downmixer(signal, osr, br, fc, fs)
+
+% TODO: You may want to implement a better downsampling filter.
+% TIP: Look up 'CIC' filters as inspiration for an efficient hardware 
+% implementation. Also think about how you will generate the LO signal in
+% hardware, looking up 'CORDIC' will set you in a correct direction.
+
+%% IQ downmixer
+
+% the frequency domain of raw input signal
+length_signal = length(signal);
+X = fft(signal);
+X_magnitiude = abs(X)/length_signal;
+X_magnitiude = X_magnitiude(1:length_signal/2);
+f = (0:length_signal/2 - 1) * (fs/length_signal);
+
+figure;
+plot(f,X_magnitiude);
+xlabel('frequency(Hz)');
+ylabel('magnitude');
+title('raw signal frequency spectrum');
+grid on;
+
+
+t = ((1 : numel(signal))' - 1) / fs;
+upsampled_envelope = 2 * exp(-1j * 2 * pi * fc * t) .* signal;
+%% Low Pass Filter
+% first simple downsampling filter
+    % filt = ones(16 * round(fs / (br * osr)) + 1);
+    % upsampled_envelope = conv(upsampled_envelope, filt / sum(filt), 'same');
+
+
+%frequency domain after down mixer
+length_signal = length(upsampled_envelope);
+X = fft(upsampled_envelope);
+X_magnitiude = abs(X)/length_signal;
+X_magnitiude = X_magnitiude(1:length_signal/2);
+f = (0:length_signal/2 - 1) * (fs/length_signal);
+
+figure;
+plot(f,X_magnitiude);
+xlabel('frequency(Hz)');
+ylabel('magnitude');
+title('down mixered frequency spectrum');
+grid on;
+
+% second filter design plan
+    %CIC filter
+    D = fs / (br * osr);
+    M = 3; % Differential Delay
+    N = 5; % Numsections
+    % CICFilter = dsp.CICDecimator(D,M,N);
+    
+    x = upsampled_envelope;
+    numSamples = length(x);
+
+    integrator = zeros(N, numSamples);
+    for i = 1 : numSamples
+        integrator(1,i) = x(i);
+        for j = 2:N
+            integrator(j,i) = integrator(j-1,i) + integrator(j,i-1);
+        end
+    end
+
+    y_down = integrator(N,1:D:end);
+
+    numOutSamples = length(y_down);
+    comb = zeros(N,numOutSamples);
+    for i = M+1:numOutSamples
+        comb(1,i) = y_down(i) - y_down(i-M);
+        for j =2:N
+            comb(j,i) = comb(j-1,u) - comb(j-1,i-M);
+        end
+    end
+    y_out = comb(N,:);
+
+    
+
+
+
+     % fvtool(CICFilter, 'Fs', fs);
+
+    % 计算输入信号的当前长度
+    num_samples = length(upsampled_envelope);
+
+    % 计算需要填充的 0 的数量
+    pad_length = ceil(num_samples / D) * D - num_samples;
+
+    last_value = upsampled_envelope(end);
+    padding = repmat(last_value, pad_length, 1);
+    % 在信号末尾填充 0
+    upsampled_envelope = [upsampled_envelope; padding];
+    % upsampled_envelope = upsampled_envelope(1:end-1);
+
+
+    fd = fs / D; 
+
+    CIC_Gain = (D * M) ^ N;
+    
+    filtered_signal = CICFilter(upsampled_envelope);
+    complex_envelope = filtered_signal / CIC_Gain;
+
+length_signal = length(complex_envelope);
+X = fft(complex_envelope);
+X_magnitiude = abs(X)/length_signal;
+X_magnitiude = X_magnitiude(1:length_signal/2);
+f = (0:length_signal/2 - 1) * (fs/length_signal);
+
+figure;
+plot(f,X_magnitiude);
+xlabel('frequency(Hz)');
+ylabel('magnitude');
+title('CIC filtered signal frequency spectrum');
+grid on;
+
+
+
+length_signal = length(complex_envelope);
+X = fft(complex_envelope);
+X_magnitiude = abs(X)/length_signal;
+X_magnitiude = X_magnitiude(1:length_signal/2);
+f = (0:length_signal/2 - 1) * (fs/length_signal);
+
+figure;
+plot(f,X_magnitiude);
+xlabel('frequency(Hz)');
+ylabel('magnitude');
+title('compensated filtered signal frequency spectrum');
+grid on;    
+    
+
+
+
+
+
+%% Down sampling
+% calculate number of output samples
+% n1 = numel(upsampled_envelope);
+% n2 = round((n1 - 1) * (br * osr) / fs) + 1;
+% 
+% %resample the complex envelope to the new sample rate
+% t1 = ((1 : n1)' - 1) / fs;
+% t2 = ((1 : n2)' - 1) / (br * osr);
+% 
+% complex_envelope = interp1(t1, upsampled_envelope, t2);
+% D = fs/(br*osr);
+% complex_envelope = upsampled_envelope(1:D:end);
+
+
+end

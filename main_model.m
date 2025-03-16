@@ -7,7 +7,7 @@ close all
 % baseband modeling parameters
 use_fec = true; % enable/disable forward error correction
 bt = 0.5; % gaussian filter bandwidth
-snr = 7; % in-band signal to noise ratio (dB)
+snr = 12; % in-band signal to noise ratio (dB)
 osr = 16; % oversampling ratio
 
 % RF modeling parameters
@@ -118,7 +118,7 @@ raw_in = repelem(encoded_in * 2 - 1, osr, 1);
 if plot_raw_data
     figure('Name', 'Raw data');
     time_in = ((1 : numel(raw_in))' - 1) / osr;
-    time_out = ((1 : numel(raw_out))' - 1) / osr;
+    time_out = ((1 : numel(raw_out))' - 1) / osr - 2;
     h = plot(time_in, raw_in, '-', ...
              time_out, raw_out, '-', ...
              clock_out, encoded_out * 2 - 1, 'sk');
