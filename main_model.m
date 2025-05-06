@@ -5,9 +5,9 @@ close all
 %% Parameter Settings
 
 % baseband modeling parameters
-use_fec = true; % enable/disable forward error correction
+use_fec = false; % enable/disable forward error correction
 bt = 0.5; % gaussian filter bandwidth
-snr = 12; % in-band signal to noise ratio (dB)
+snr = 15; % in-band signal to noise ratio (dB)
 osr = 16; % oversampling ratio
 
 % RF modeling parameters
@@ -23,7 +23,7 @@ plot_raw_data = true;
 plot_rf_signal = true;
 
 % input message
-message_in = 'Hello123456879123456789123456789123456789';
+message_in = 'hello';
 disp(message_in);
 
 
@@ -72,11 +72,12 @@ end
 if use_rf
     
     % automatic gain control
+    waveform_data = load("gmsk_level_10.mat");
     signal_agc = agc_gain(signal_out);
-    
+    % signal_agc = agc_gain(waveform_data.data);
     % quantization
     signal_quantized = quantize(signal_agc, adc_levels);
-    
+
     % downmixing
     complex_envelope_out = iq_downmixer(signal_quantized, osr, br, fc, fs);
     
