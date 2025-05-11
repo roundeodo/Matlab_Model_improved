@@ -14,5 +14,5 @@ else
  bits = round(31*symbols / max(abs(symbols)));
  bits = bits + 31;
 end
- bits = [bits(3:end);bits(1);bits(2)];
+ % bits = [bits(3:end);bits(1);bits(2)];
 end

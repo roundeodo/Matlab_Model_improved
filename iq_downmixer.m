@@ -6,7 +6,51 @@ function complex_envelope = iq_downmixer(signal, osr, br, fc, fs)
 % hardware, looking up 'CORDIC' will set you in a correct direction.
 
 %% IQ downmixer
+    %CIC filter
+    D = fs / (br * osr);
+    M = 1; % Differential Delay
+    N = 5; % Numsections
+    CICFilter = dsp.CICDecimator(D,M,N);
+
+
+    
 t = ((1 : numel(signal))' - 1) / fs;
+
+% fc_list = 19.5e3 : 0.1e3 : 20.5e3;
+% energy = zeros(size(fc_list));
+% for i = 1:length(fc_list)
+%     t_track = ((1 : numel(signal(1 + 2400*(i-1) :2400*i )))' - 1) / fs;
+%     fc_test=fc_list(i);
+%     carrier = exp(-1j * 2 * pi * fc_test * t_track);
+%     baseband = signal(1 + 2400*(i-1) :2400*i ) .* carrier;
+%     % filtered_signal_for_tracking = CICFilter(baseband);
+%     filtered_signal_for_tracking = imag(baseband);
+%     energy(i) = (sum(filtered_signal_for_tracking));
+% end
+% plot(fc_list/1e3, energy, '-o');
+% xlabel('fc test (kHz)');
+% ylabel('energy');
+% grid on;
+% [~,idx_max] = max(energy);
+% fc_est = fc_list(idx_max);
+
+% fc_list = 19.5e3 : 0.1e3 : 20.5e3;
+% energy = zeros(size(fc_list));
+% for i = 1:length(fc_list)
+%     t_track = ((1 : numel(signal(1 : 400)))' - 1) / fs;
+%     fc_test=fc_list(i);
+%     carrier = exp(-1j * 2 * pi * fc_test * t_track);
+%     baseband = signal(1:2600) .* carrier;
+%     energy(i) = (sum(baseband));
+% end
+% plot(fc_list/1e3, energy, '-o');
+% xlabel('fc test (kHz)');
+% ylabel('energy');
+% grid on;
+% [~,idx_max] = max(energy);
+% fc_est = fc_list(idx_max);
+
+
 upsampled_envelope = 2 * exp(-1j * 2 * pi * fc * t) .* signal;
 %% Low Pass Filter
 % first simple downsampling filter
@@ -45,42 +89,43 @@ upsampled_envelope = 2 * exp(-1j * 2 * pi * fc * t) .* signal;
     H_cic_norm = H_cic / 1024;
 
 
-    % 1. 提取实部和虚部
-    real_part = real(upsampled_envelope);
-    imag_part = imag(upsampled_envelope);
-
-    % 2. 映射为 Q1.14 格式，即乘以 2^14（=16384），再转为 int16
-    real_fixed = round(real_part * 2^14);  % 乘以 16384
-    imag_fixed = round(imag_part * 2^14);
-
-    % 3. 限制范围 [-32768, 32767]（int16 极限值）
-    real_fixed = max(min(real_fixed, 32767), -32768);
-    imag_fixed = max(min(imag_fixed, 32767), -32768);
-
-    % 4. 转为 16位补码二进制字符串
-    real_bin = dec2bin(typecast(int16(real_fixed), 'uint16'), 16); % 保留完整16位补码
-    imag_bin = dec2bin(typecast(int16(imag_fixed), 'uint16'), 16);
- 
-    % 5. 保存为文本文件，每行一条
-    fid1 = fopen('real_part_q1_14.txt', 'wt');
-    for i = 1:size(real_bin, 1)
-        fprintf(fid1, '%s\n', real_bin(i, :));
-    end
-    fclose(fid1);
-
-    fid2 = fopen('imag_part_q1_14.txt', 'wt');
-    for i = 1:size(imag_bin, 1)
-        fprintf(fid2, '%s\n', imag_bin(i, :));
-    end
-    fclose(fid2);
+    % % 1. 提取实部和虚部
+    % real_part = real(upsampled_envelope);
+    % imag_part = imag(upsampled_envelope);
+    % 
+    % % 2. 映射为 Q1.14 格式，即乘以 2^14（=16384），再转为 int16
+    % real_fixed = round(real_part * 2^14);  % 乘以 16384
+    % imag_fixed = round(imag_part * 2^14);
+    % 
+    % % 3. 限制范围 [-32768, 32767]（int16 极限值）
+    % real_fixed = max(min(real_fixed, 32767), -32768);
+    % imag_fixed = max(min(imag_fixed, 32767), -32768);
+    % 
+    % % 4. 转为 16位补码二进制字符串
+    % real_bin = dec2bin(typecast(int16(real_fixed), 'uint16'), 16); % 保留完整16位补码
+    % imag_bin = dec2bin(typecast(int16(imag_fixed), 'uint16'), 16);
+    % 
+    % % 5. 保存为文本文件，每行一条
+    % fid1 = fopen('real_part_q1_14.txt', 'wt');
+    % for i = 1:size(real_bin, 1)
+    %     fprintf(fid1, '%s\n', real_bin(i, :));
+    % end
+    % fclose(fid1);
+    % 
+    % fid2 = fopen('imag_part_q1_14.txt', 'wt');
+    % for i = 1:size(imag_bin, 1)
+    %     fprintf(fid2, '%s\n', imag_bin(i, :));
+    % end
+    % fclose(fid2);
 
     y = cic_decimator_match_dsp(upsampled_envelope, D, M, N);
     y_real = real(y);
     y_imag = imag(y);
     filtered_signal = CICFilter(upsampled_envelope);
+    % filtered_signal = [filtered_signal(2:end);filtered_signal(end)];
     real_unormalized = real(filtered_signal);
     image_unormalized = imag(filtered_signal);
-    filtered_signal = y / CIC_Gain;
+    filtered_signal = filtered_signal / CIC_Gain;
     complex_envelope = filtered_signal;
     real_part_1 = real(complex_envelope);
     imag_part_1 = imag(complex_envelope);

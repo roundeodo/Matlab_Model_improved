@@ -5,26 +5,26 @@ close all
 %% Parameter Settings
 
 % baseband modeling parameters
-use_fec = false; % enable/disable forward error correction
+use_fec = true; % enable/disable forward error correction
 bt = 0.5; % gaussian filter bandwidth
 snr = 30; % in-band signal to noise ratio (dB)
-osr = 10; % oversampling ratio
+osr = 16; % oversampling ratio
 
 % RF modeling parameters
 use_rf = true; % enable/disable RF model
 extract_way = "hard";
 adc_levels = 32; % number of ADC output codes (NB: #bits = log2[#levels])
 br = 100; % bit rate (bit/s)
-fc_encode = 20.0e3; % carrier frequency (Hz)
-fc_decode = 20.0e3;
-fs = 100.0e3; % sample frequency (Hz)
+fc_encode = 19.7e3; % carrier frequency (Hz)
+fc_decode = 
+fs = 48.0e3; % sample frequency (Hz)
 
 % plotting parameters
 plot_raw_data = true;
 plot_rf_signal = true;
 
 % input message
-message_in = 'hello';
+message_in = 'hello hello hello hello hello hello hello hello hello hello hello';
 disp(message_in);
 
 
@@ -73,14 +73,14 @@ end
 if use_rf
     
     % automatic gain control
-    waveform_data = load("gmsk_level_8.mat");
-    % signal_agc = agc_gain(signal_out);
-    signal_agc = agc_gain(waveform_data.data);
+    waveform_data = load("gmsk_level_10.mat");
+    signal_agc = agc_gain(signal_out);
+    % signal_agc = agc_gain(waveform_data.data);
     % quantization
     signal_quantized = quantize(signal_agc, adc_levels);
 
     % downmixing
-    complex_envelope_out = iq_downmixer(signal_quantized, osr, br, fc_decode, fs);
+    complex_envelope_out = iq_downmixer(signal_quantized, osr, br, fc, fs);
     
 end
 

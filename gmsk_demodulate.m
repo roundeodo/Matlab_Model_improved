@@ -18,7 +18,7 @@ fc = 1 / (2 * osr);  % 截止频率 = Rb/2 归一化
 
 B = fir1(50, fc * 2);  % 低通滤波器
 complex_envelope = complex_envelope / max(abs(complex_envelope));
-complex_envelope = filter(B,1,complex_envelope);
+complex_envelope = filter(B,1,complex_envelope);  
 %IQ_synced = costas_loop(complex_envelope,0.01);
 I = real(complex_envelope);
 Q = imag(complex_envelope);
@@ -33,7 +33,7 @@ phase_origin = atan2(Q, I);
 phase_origin_transformed = phase_origin.';
 
 phase = unwrap(atan2(Q, I));
-
+% phase = filter(B,1,phase);
 
 
 % 假设 phase 是你已有的向量（单位为弧度），是 1×N 或 N×1
